@@ -3,7 +3,7 @@ const fs = require("fs");
 const cors = require("cors");
 const PDFDocument = require("pdfkit");
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 const LOCAL_IP = "localhost";
 
