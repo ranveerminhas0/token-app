@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useToast } from '@chakra-ui/react';
 import SearchResults from '../components/SearchResults';
+import { getApiUrl } from '../services/api';
 
 const Search = () => {
   const [searchParams] = useSearchParams();
@@ -24,7 +25,7 @@ const Search = () => {
     const fetchResults = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch('/tokens');
+        const response = await fetch(getApiUrl('tokens'));
         if (!response.ok) throw new Error('Failed to fetch tokens');
         const data = await response.json();
         

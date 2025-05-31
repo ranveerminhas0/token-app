@@ -14,6 +14,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import './ButtonEffect.css'
 import Sidebar from './Sidebar'
 import HamburgerButton from './HamburgerButton'
+import { getApiUrl } from '../services/api'
 
 const MotionBox = motion(Box)
 
@@ -110,7 +111,7 @@ function Landing() {
         return
       }
 
-      const response = await fetch('/create-token', {
+      const response = await fetch(getApiUrl('create-token'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -166,7 +167,7 @@ function Landing() {
         return
       }
 
-      const response = await fetch(`/redeem-token/${redeemForm.tokenCode}`, {
+      const response = await fetch(getApiUrl(`redeem-token/${redeemForm.tokenCode}`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

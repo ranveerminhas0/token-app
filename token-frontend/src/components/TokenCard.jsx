@@ -2,6 +2,7 @@ import { Box, Text, VStack, Badge, Menu, MenuButton, MenuList, MenuItem, IconBut
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { FiMoreVertical, FiEdit2, FiShare2, FiTrash2 } from 'react-icons/fi';
+import { getApiUrl } from '../services/api';
 import './TokenCard.css';
 
 const TokenCard = ({ token, onTokenDeleted, highlight = false, autoExpand = false }) => {
@@ -41,7 +42,7 @@ const TokenCard = ({ token, onTokenDeleted, highlight = false, autoExpand = fals
 
   const handleShare = async () => {
     try {
-      const response = await fetch(`/token/${token.serial}`);
+      const response = await fetch(getApiUrl(`token/${token.serial}`));
       if (!response.ok) throw new Error('Failed to get token details');
       const data = await response.json();
       window.open(data.whatsappLink, '_blank');
@@ -59,7 +60,7 @@ const TokenCard = ({ token, onTokenDeleted, highlight = false, autoExpand = fals
 
   const handleDelete = async () => {
     try {
-      const response = await fetch(`/delete-token/${token.serial}`, {
+      const response = await fetch(getApiUrl(`delete-token/${token.serial}`), {
         method: 'DELETE',
       });
       if (!response.ok) throw new Error('Failed to delete token');
@@ -87,7 +88,7 @@ const TokenCard = ({ token, onTokenDeleted, highlight = false, autoExpand = fals
 
   const handleEdit = async () => {
     try {
-      const response = await fetch(`/edit-token/${token.serial}`, {
+      const response = await fetch(getApiUrl(`edit-token/${token.serial}`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
