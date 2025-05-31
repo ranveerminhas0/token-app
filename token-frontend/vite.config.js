@@ -11,7 +11,7 @@ export default defineConfig({
     open: true,
     proxy: {
       '/api': {
-        target: import.meta.env.VITE_API_URL || 'http://localhost:3000',
+        target: 'http://localhost:3000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
       }
@@ -28,14 +28,10 @@ export default defineConfig({
     ]
   },
   optimizeDeps: {
-    include: ['react', 'react-dom'],
-    exclude: ['@rollup/rollup-win32-x64-msvc']
+    include: ['react', 'react-dom']
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
-    rollupOptions: {
-      external: ['@rollup/rollup-win32-x64-msvc']
-    }
+    sourcemap: true
   }
 })
