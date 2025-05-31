@@ -1,0 +1,46 @@
+.token-card {
+  width: 100%;
+  position: relative;
+  cursor: pointer;
+}
+
+.token-card-inner {
+  position: relative;
+  z-index: 1;
+  backdrop-filter: blur(10px);
+}
+
+.token-card-inner::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(45deg, rgba(122, 236, 218, 0.1), rgba(122, 236, 218, 0.2));
+  z-index: -1;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.token-card:hover .token-card-inner::before {
+  opacity: 1;
+}
+
+.token-card:hover .token-card-inner {
+  border-color: rgba(122, 236, 218, 0.4) !important;
+}
+
+/* Glow effect on hover */
+.token-card::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(122, 236, 218, 0.2), transparent 40%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.token-card:hover::after {
+  opacity: 1;
+} 

@@ -1,0 +1,44 @@
+.spotlight-card {
+  position: relative;
+  border-radius: 15px;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(122, 236, 218, 0.1);
+  transition: border 0.3s ease;
+}
+
+.spotlight-card:hover {
+  border: 1px solid rgba(122, 236, 218, 0.2);
+}
+
+.spotlight-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.spotlight-card:hover::before {
+  opacity: 1;
+  background: radial-gradient(
+    600px circle at var(--mouse-x) var(--mouse-y),
+    rgba(122, 236, 218, 0.1),
+    transparent 40%
+  );
+}
+
+/* Remove any transform effects that might cause zooming */
+.spotlight-card,
+.spotlight-card:hover,
+.spotlight-card *,
+.spotlight-card *:hover {
+  transform: none !important;
+  zoom: 100% !important;
+}
+
+.custom-spotlight-card {
+  --spotlight-color: rgba(122, 236, 218, 0.1);
+} 

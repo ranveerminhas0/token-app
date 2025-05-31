@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: kalon-token-backend
+    env: node
+    buildCommand: npm install
+    startCommand: node Index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+    healthCheckPath: /tokens
+    autoDeploy: true 

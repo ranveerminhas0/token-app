@@ -1,0 +1,40 @@
+.search-bar-container {
+  position: relative;
+  pointer-events: auto !important;
+}
+
+.search-bar-container * {
+  pointer-events: auto !important;
+}
+
+.search-bar-input {
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease !important;
+}
+
+.search-bar-input:focus {
+  transform: scale(1.02);
+  box-shadow: 0 0 15px rgba(122, 236, 218, 0.2) !important;
+}
+
+.glow-effect {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    circle at center,
+    rgba(122, 236, 218, 0.1) 0%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.search-bar-container:hover .glow-effect,
+.search-bar-container:focus-within .glow-effect {
+  opacity: 1;
+} 

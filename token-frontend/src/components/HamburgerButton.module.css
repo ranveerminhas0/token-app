@@ -1,0 +1,43 @@
+.hamburgerButton {
+  position: fixed !important;
+  top: 20px !important;
+  left: 20px !important;
+  z-index: 9999 !important;
+  width: 50px !important;
+  height: 50px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  background: rgba(0, 0, 0, 0.7) !important;
+  border: 2px solid rgba(122, 236, 218, 0.3) !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  padding: 10px !important;
+  transition: all 0.3s ease !important;
+  backdrop-filter: blur(5px) !important;
+}
+
+.hamburgerButton:hover {
+  background: rgba(122, 236, 218, 0.1) !important;
+  border-color: rgba(122, 236, 218, 0.5) !important;
+  box-shadow: 0 0 20px rgba(122, 236, 218, 0.3) !important;
+  transform: scale(1.05) !important;
+}
+
+.line {
+  width: 30px !important;
+  height: 3px !important;
+  background-color: #7aecda !important;
+  margin-bottom: 6px !important;
+  box-shadow: 0 0 8px rgba(122, 236, 218, 0.6) !important;
+  transition: all 0.3s ease !important;
+}
+
+.hamburgerButton:hover .line {
+  box-shadow: 0 0 15px rgba(122, 236, 218, 0.8) !important;
+}
+
+.line:last-child {
+  margin-bottom: 0 !important;
+} 
