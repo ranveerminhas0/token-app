@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaChevronDown, FaChevronRight } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import styles from './Sidebar.module.css';
+import { getApiUrl } from '../services/api';
 
 const MenuItem = ({ label, isOpen, onClick, hasSubItems, isSubItem = false }) => (
   <button
@@ -30,7 +31,7 @@ const Sidebar = ({ isOpen }) => {
 
   const handleReportDownload = async (reportType) => {
     try {
-      const response = await fetch(`/api/reports/${reportType}`);
+      const response = await fetch(getApiUrl(`api/reports/${reportType}`));
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');

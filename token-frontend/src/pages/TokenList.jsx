@@ -5,6 +5,7 @@ import TokenGrid from '../components/TokenGrid';
 import Particles from '../components/Particles';
 import Sidebar from '../components/Sidebar';
 import HamburgerButton from '../components/HamburgerButton';
+import { getApiUrl } from '../services/api';
 
 const TokenList = () => {
   const { type } = useParams();
@@ -22,7 +23,7 @@ const TokenList = () => {
   useEffect(() => {
     const fetchTokens = async () => {
       try {
-        const response = await fetch('/tokens');
+        const response = await fetch(getApiUrl('tokens'));
         const data = await response.json();
         
         // Filter tokens based on type

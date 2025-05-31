@@ -2,6 +2,7 @@ import { Box, Heading, SimpleGrid, VStack, Flex, Button, HStack } from '@chakra-
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import TokenCard from '../components/TokenCard';
+import { getApiUrl } from '../services/api';
 
 const AllTokens = () => {
   const [tokens, setTokens] = useState([]);
@@ -12,11 +13,11 @@ const AllTokens = () => {
   useEffect(() => {
     const fetchTokens = async () => {
       try {
-        const response = await fetch('/tokens');
+        const response = await fetch(getApiUrl('tokens'));
         if (!response.ok) throw new Error('Failed to fetch tokens');
         const data = await response.json();
-        setTokens(data);
-        setFilteredTokens(data);
+        setTokens(data.tokens);
+        setFilteredTokens(data.tokens);
       } catch (error) {
         console.error('Error fetching tokens:', error);
       } finally {
