@@ -393,6 +393,6 @@ app.get("/api/reports/:type", (req, res) => {
 });
 
 // Start Server
-app.listen(PORT, LOCAL_IP, () => {
-  console.log(`✅ Backend Server running on http://${LOCAL_IP}:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Backend Server running on port ${PORT}`);
 });
