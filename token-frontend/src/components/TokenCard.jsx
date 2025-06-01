@@ -230,7 +230,12 @@ const TokenCard = ({ token, onTokenDeleted, highlight = false, autoExpand = fals
               <Text color="gray.300">Owner: {token.ownerName}</Text>
               <Text color="gray.300">Phone: {token.ownerPhone}</Text>
               <Text color="gray.300">Uses: {token.uses}/{token.maxUses}</Text>
-              <Text color="gray.300">Business: ₹{token.totalBusiness}</Text>
+              <Text color="gray.300">Owner Business: ₹{token.ownerBusiness}</Text>
+              <Text color="gray.300">
+                Redeemer Contribution: ₹
+                {token.redeemerBusiness.reduce((sum, b) => sum + (b.amount || 0), 0)}
+              </Text>
+              <Text color="gray.300" fontWeight="bold">Total Business: ₹{token.totalBusiness}</Text>
             </VStack>
 
             {/* Expanded Content */}
