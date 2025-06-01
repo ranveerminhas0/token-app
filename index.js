@@ -120,7 +120,7 @@ app.post("/redeem-token/:tokenCode", async (req, res) => {
     const token = await Token.findOne({ token: tokenCode });
     if (!token) return res.status(404).json({ message: "Token not found" });
 
-    // Calculate current totals
+    // Calculate current totals for reissue check
     const redeemerTotal = token.redeemerBusiness.reduce((sum, b) => sum + b.amount, 0);
     const currentTotal = redeemerTotal + token.ownerBusiness;
     const usesExceeded = token.uses >= token.maxUses;
