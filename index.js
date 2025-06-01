@@ -223,6 +223,10 @@ app.get("/token/:serial", async (req, res) => {
 
     if (!token) return res.status(404).json({ message: "Token not found" });
 
+    // Update token status and recalculate business totals
+    token.updateStatus();
+    await token.save();
+
     // Calculate redeemer total
     const redeemerTotal = token.redeemerBusiness.reduce((sum, b) => sum + b.amount, 0);
 
