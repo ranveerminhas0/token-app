@@ -1,7 +1,10 @@
 const express = require("express");
-const fs = require("fs");
 const cors = require("cors");
+const connectDB = require('./db');
+const Token = require('./models/Token');
 const PDFDocument = require("pdfkit");
+require('dotenv').config();
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -10,31 +13,24 @@ const LOCAL_IP = "localhost";
 app.use(cors());
 app.use(express.json());
 
-const DATA_FILE = "./tokens.json";
+// Connect to MongoDB
+connectDB();
 
-function loadTokens() {
-  if (!fs.existsSync(DATA_FILE)) return [];
-  return JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
-}
-
-function getNextSerial(tokens) {
-  if (tokens.length === 0) return 1;
-  // Find the highest serial number and add 1
-  const maxSerial = Math.max(...tokens.map(t => t.serial));
-  return maxSerial + 1;
-}
-
-function saveTokens(tokens) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(tokens, null, 2));
-}
-
+// Helper function to generate token code
 function generateTokenCode() {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let code = "K1";
+  const prefix = 'K1';
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
   for (let i = 0; i < 5; i++) {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-  return code;
+  return prefix + code;
+}
+
+// Helper function to get next serial number
+async function getNextSerial() {
+  const lastToken = await Token.findOne().sort({ serial: -1 });
+  return lastToken ? lastToken.serial + 1 : 1;
 }
 
 function calculateRemainingDays(expirationDate) {
@@ -77,130 +73,146 @@ app.get("/", (req, res) => {
 });
 
 // Create new token
-app.post("/create-token", (req, res) => {
-  const { ownerName, ownerPhone, residence, ownerBusiness = 0 } = req.body;
-  const tokens = loadTokens();
+app.post("/create-token", async (req, res) => {
+  try {
+    const { ownerName, ownerPhone, residence, ownerBusiness = 0 } = req.body;
 
-  const serial = getNextSerial(tokens);
-  const tokenCode = generateTokenCode();
+    const serial = await getNextSerial();
+    const tokenCode = generateTokenCode();
 
-  const issueDate = new Date();
-  const expirationDate = new Date(issueDate);
-  expirationDate.setFullYear(issueDate.getFullYear() + 1);
+    const issueDate = new Date();
+    const expirationDate = new Date(issueDate);
+    expirationDate.setFullYear(issueDate.getFullYear() + 1);
 
-  const newToken = {
-    serial,
-    token: tokenCode,
-    ownerName,
-    ownerPhone,
-    residence,
-    ownerBusiness,
-    redeemerBusiness: [],
-    totalBusiness: ownerBusiness,
-    uses: 0,
-    maxUses: 5,
-    status: "Active",
-    issueDate: issueDate.toISOString().split("T")[0],
-    expirationDate: expirationDate.toISOString().split("T")[0],
-    redemptions: [],
-  };
+    const newToken = new Token({
+      serial,
+      token: tokenCode,
+      ownerName,
+      ownerPhone,
+      residence,
+      ownerBusiness,
+      redeemerBusiness: [],
+      totalBusiness: ownerBusiness,
+      uses: 0,
+      maxUses: 5,
+      status: "Active",
+      issueDate: issueDate.toISOString().split("T")[0],
+      expirationDate: expirationDate.toISOString().split("T")[0],
+      redemptions: [],
+    });
 
-  updateTokenStatus(newToken);
-  tokens.push(newToken);
-  saveTokens(tokens);
+    newToken.updateStatus();
+    await newToken.save();
 
-  res.json({ message: "Token created", token: newToken });
+    res.json({ message: "Token created", token: newToken });
+  } catch (error) {
+    console.error('Error creating token:', error);
+    res.status(500).json({ message: "Error creating token" });
+  }
 });
 
 // Redeem token
-app.post("/redeem-token/:tokenCode", (req, res) => {
-  const tokenCode = req.params.tokenCode.toUpperCase();
-  const { redeemerName, redeemerPhone, amount = 0 } = req.body;
-  const tokens = loadTokens();
+app.post("/redeem-token/:tokenCode", async (req, res) => {
+  try {
+    const tokenCode = req.params.tokenCode.toUpperCase();
+    const { redeemerName, redeemerPhone, amount = 0 } = req.body;
 
-  const token = tokens.find((t) => t.token === tokenCode);
-  if (!token) return res.status(404).json({ message: "Token not found" });
+    const token = await Token.findOne({ token: tokenCode });
+    if (!token) return res.status(404).json({ message: "Token not found" });
 
-  // Calculate current totals
-  const redeemerTotal = token.redeemerBusiness.reduce((sum, b) => sum + b.amount, 0);
-  const currentTotal = redeemerTotal + token.ownerBusiness;
-  const usesExceeded = token.uses >= token.maxUses;
+    // Calculate current totals
+    const redeemerTotal = token.redeemerBusiness.reduce((sum, b) => sum + b.amount, 0);
+    const currentTotal = redeemerTotal + token.ownerBusiness;
+    const usesExceeded = token.uses >= token.maxUses;
 
-  // Handle reissuance if needed - only if under 40k
-  if (usesExceeded && currentTotal < 40000) {
-    console.log(`Reissuing token ${token.token} - Current business: ₹${currentTotal}`);
-    const previousUses = token.uses;  // Store previous uses
-    token.maxUses += 5;  // Add 5 more uses
-    token.uses = previousUses;  // Keep the previous uses count
+    // Handle reissuance if needed - only if under 40k
+    if (usesExceeded && currentTotal < 40000) {
+      console.log(`Reissuing token ${token.token} - Current business: ₹${currentTotal}`);
+      const previousUses = token.uses;
+      token.maxUses += 5;
+      token.uses = previousUses;
+      token.redemptions.push({
+        date: new Date().toISOString().split("T")[0],
+        redeemerName: "SYSTEM",
+        redeemerPhone: "-",
+        note: `Token reissued - Business (₹${currentTotal}) under ₹40,000 - Previous uses: ${previousUses}, New max uses: ${token.maxUses}`
+      });
+    }
+
+    token.updateStatus();
+    
+    if (token.status === "Expired") {
+      return res.status(400).json({ message: "Token is expired" });
+    }
+
+    token.uses += 1;
     token.redemptions.push({
       date: new Date().toISOString().split("T")[0],
-      redeemerName: "SYSTEM",
-      redeemerPhone: "-",
-      note: `Token reissued - Business (₹${currentTotal}) under ₹40,000 - Previous uses: ${previousUses}, New max uses: ${token.maxUses}`
+      redeemerName,
+      redeemerPhone,
     });
+
+    token.redeemerBusiness.push({ redeemerName, amount });
+    token.updateStatus();
+    await token.save();
+
+    res.json({ message: "Token redeemed successfully", token });
+  } catch (error) {
+    console.error('Error redeeming token:', error);
+    res.status(500).json({ message: "Error redeeming token" });
   }
-
-  // Update status after potential reissuance
-  updateTokenStatus(token);
-  
-  // Check if token is expired (either due to date or max uses)
-  if (token.status === "Expired") {
-    return res.status(400).json({ message: "Token is expired" });
-  }
-
-  // Process the redemption
-  token.uses += 1;
-  token.redemptions.push({
-    date: new Date().toISOString().split("T")[0],
-    redeemerName,
-    redeemerPhone,
-  });
-
-  token.redeemerBusiness.push({ redeemerName, amount });
-  updateTokenStatus(token);
-  saveTokens(tokens);
-
-  res.json({ message: "Token redeemed successfully", token });
 });
 
 // Edit token
-app.put("/edit-token/:serial", (req, res) => {
-  const serial = parseInt(req.params.serial);
-  const { ownerName, ownerPhone, residence, ownerBusiness } = req.body;
-  const tokens = loadTokens();
+app.put("/edit-token/:serial", async (req, res) => {
+  try {
+    const serial = parseInt(req.params.serial);
+    const { ownerName, ownerPhone, residence, ownerBusiness } = req.body;
 
-  const token = tokens.find((t) => t.serial === serial);
-  if (!token) return res.status(404).json({ message: "Token not found" });
+    const token = await Token.findOne({ serial });
+    if (!token) return res.status(404).json({ message: "Token not found" });
 
-  token.ownerName = ownerName;
-  token.ownerPhone = ownerPhone;
-  token.residence = residence;
-  token.ownerBusiness = ownerBusiness;
-  updateTokenStatus(token);
-  saveTokens(tokens);
+    token.ownerName = ownerName;
+    token.ownerPhone = ownerPhone;
+    token.residence = residence;
+    token.ownerBusiness = ownerBusiness;
+    token.updateStatus();
+    await token.save();
 
-  res.json({ message: "Token updated", token });
+    res.json({ message: "Token updated", token });
+  } catch (error) {
+    console.error('Error updating token:', error);
+    res.status(500).json({ message: "Error updating token" });
+  }
 });
 
 // Delete token
-app.delete("/delete-token/:serial", (req, res) => {
-  const serial = parseInt(req.params.serial);
-  let tokens = loadTokens();
+app.delete("/delete-token/:serial", async (req, res) => {
+  try {
+    const serial = parseInt(req.params.serial);
+    const result = await Token.deleteOne({ serial });
+    
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: "Token not found" });
+    }
 
-  const index = tokens.findIndex((t) => t.serial === serial);
-  if (index === -1) return res.status(404).json({ message: "Token not found" });
-
-  tokens.splice(index, 1);
-  saveTokens(tokens);
-
-  res.json({ message: "Token deleted" });
+    res.json({ message: "Token deleted" });
+  } catch (error) {
+    console.error('Error deleting token:', error);
+    res.status(500).json({ message: "Error deleting token" });
+  }
 });
 
-// Get all tokens (with optional status filter)
-app.get("/tokens", (req, res) => {
-  const tokens = loadTokens();
-  tokens.forEach(updateTokenStatus);
-  res.json({ tokens });
+// Get all tokens
+app.get("/tokens", async (req, res) => {
+  try {
+    const tokens = await Token.find();
+    tokens.forEach(token => token.updateStatus());
+    res.json({ tokens });
+  } catch (error) {
+    console.error('Error fetching tokens:', error);
+    res.status(500).json({ message: "Error fetching tokens" });
+  }
 });
 
 // Get single token with WhatsApp link (UPDATED)
