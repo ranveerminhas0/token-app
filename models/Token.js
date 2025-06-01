@@ -72,6 +72,10 @@ tokenSchema.methods.updateStatus = function() {
   const expDate = new Date(this.expirationDate);
   const isExpired = expDate < today || this.uses >= this.maxUses;
   
+  // Calculate total business
+  const redeemerTotal = this.redeemerBusiness.reduce((sum, b) => sum + (b.amount || 0), 0);
+  this.totalBusiness = this.ownerBusiness + redeemerTotal;
+  
   this.status = isExpired ? 'Expired' : 'Active';
   this.statusColor = this.status === 'Expired' ? 'red' : 'green';
   
