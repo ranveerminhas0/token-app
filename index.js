@@ -216,79 +216,84 @@ app.get("/tokens", async (req, res) => {
 });
 
 // Get single token with WhatsApp link (UPDATED)
-app.get("/token/:serial", (req, res) => {
-  const serial = parseInt(req.params.serial);
-  const tokens = loadTokens().map(updateTokenStatus);
-  const token = tokens.find((t) => t.serial === serial);
+app.get("/token/:serial", async (req, res) => {
+  try {
+    const serial = parseInt(req.params.serial);
+    const token = await Token.findOne({ serial });
 
-  if (!token) return res.status(404).json({ message: "Token not found" });
+    if (!token) return res.status(404).json({ message: "Token not found" });
 
-  const redeemerTotal = token.redeemerBusiness.reduce((sum, b) => sum + b.amount, 0);
+    // Calculate redeemer total
+    const redeemerTotal = token.redeemerBusiness.reduce((sum, b) => sum + b.amount, 0);
 
-  // Find the reissuance point in redemptions
-  const reissueIndex = token.redemptions.findIndex(r => r.redeemerName === "SYSTEM");
-  const originalRedemptions = reissueIndex !== -1 ? token.redemptions.slice(0, reissueIndex) : token.redemptions;
-  const reissuedRedemptions = reissueIndex !== -1 ? token.redemptions.slice(reissueIndex + 1) : [];
-  const reissueInfo = reissueIndex !== -1 ? token.redemptions[reissueIndex] : null;
+    // Find the reissuance point in redemptions
+    const reissueIndex = token.redemptions.findIndex(r => r.redeemerName === "SYSTEM");
+    const originalRedemptions = reissueIndex !== -1 ? token.redemptions.slice(0, reissueIndex) : token.redemptions;
+    const reissuedRedemptions = reissueIndex !== -1 ? token.redemptions.slice(reissueIndex + 1) : [];
+    const reissueInfo = reissueIndex !== -1 ? token.redemptions[reissueIndex] : null;
 
-  let message = `*KALON SALON & ACADEMY💇🏻‍♂️*\n\n*🎟Your Referral Token Details :-*\n\n`;
-  
-  // Basic token info
-  message += `Serial: ${token.serial}\n`;
-  message += `Token Code: ${token.token}\n`;
-  message += `Owner Name: ${token.ownerName}\n`;
-  message += `Owner Phone: ${token.ownerPhone}\n`;
-  message += `Residence: ${token.residence}\n`;
-  message += `Uses: ${token.uses}/${token.maxUses}${token.maxUses > 5 ? ' (Reissued)' : ''}\n`;
-  message += `Status: ${token.status}\n`;
-  message += `Issue Date: ${token.issueDate}\n`;
-  message += `Expiration Date: ${token.expirationDate}\n`;
-  message += `Remaining Days: ${token.remainingDays}\n\n`;
+    let message = `*KALON SALON & ACADEMY💇🏻‍♂️*\n\n*🎟Your Referral Token Details :-*\n\n`;
+    
+    // Basic token info
+    message += `Serial: ${token.serial}\n`;
+    message += `Token Code: ${token.token}\n`;
+    message += `Owner Name: ${token.ownerName}\n`;
+    message += `Owner Phone: ${token.ownerPhone}\n`;
+    message += `Residence: ${token.residence}\n`;
+    message += `Uses: ${token.uses}/${token.maxUses}${token.maxUses > 5 ? ' (Reissued)' : ''}\n`;
+    message += `Status: ${token.status}\n`;
+    message += `Issue Date: ${token.issueDate}\n`;
+    message += `Expiration Date: ${token.expirationDate}\n`;
+    message += `Remaining Days: ${token.remainingDays}\n\n`;
 
-  // Business amounts in bold
-  message += `*Business Summary:*\n`;
-  message += `*Owner Business*: ₹${token.ownerBusiness}\n`;
-  message += `*Total Redeemer Contribution*: ₹${redeemerTotal}\n`;
-  message += `*Total Business*: ₹${token.totalBusiness}\n\n`;
+    // Business amounts in bold
+    message += `*Business Summary:*\n`;
+    message += `*Owner Business*: ₹${token.ownerBusiness}\n`;
+    message += `*Total Redeemer Contribution*: ₹${redeemerTotal}\n`;
+    message += `*Total Business*: ₹${token.totalBusiness}\n\n`;
 
-  // Original redemptions
-  if (originalRedemptions.length > 0) {
-    message += `*🧾 Original Token Redemptions:*\n`;
-    originalRedemptions.forEach((r, i) => {
-      const amountEntry = token.redeemerBusiness.find(b => b.redeemerName === r.redeemerName);
-      const amountText = amountEntry ? ` - ₹${amountEntry.amount}` : "";
-      message += `${i + 1}. ${r.redeemerName} - ${r.redeemerPhone} on ${r.date}${amountText}\n`;
-    });
-    message += '\n';
+    // Original redemptions
+    if (originalRedemptions.length > 0) {
+      message += `*🧾 Original Token Redemptions:*\n`;
+      originalRedemptions.forEach((r, i) => {
+        const amountEntry = token.redeemerBusiness.find(b => b.redeemerName === r.redeemerName);
+        const amountText = amountEntry ? ` - ₹${amountEntry.amount}` : "";
+        message += `${i + 1}. ${r.redeemerName} - ${r.redeemerPhone} on ${r.date}${amountText}\n`;
+      });
+      message += '\n';
+    }
+
+    // Reissuance information
+    if (reissueInfo) {
+      message += `*🔄 Token Reissuance:*\n`;
+      message += `${reissueInfo.note}\n\n`;
+    }
+
+    // Reissued redemptions
+    if (reissuedRedemptions.length > 0) {
+      message += `*🧾 Reissued Token Redemptions:*\n`;
+      reissuedRedemptions.forEach((r, i) => {
+        const amountEntry = token.redeemerBusiness.find(b => b.redeemerName === r.redeemerName);
+        const amountText = amountEntry ? ` - ₹${amountEntry.amount}` : "";
+        message += `${i + 1}. ${r.redeemerName} - ${r.redeemerPhone} on ${r.date}${amountText}\n`;
+      });
+      message += '\n';
+    }
+
+    // Footer
+    message += `*Follow us on Instagram here⬇ :*\n`;
+    message += `https://bit.ly/3F7Bv1E\n\n`;
+    message += `_Thanks for your Kind visit💌_`;
+
+    const encoded = encodeURIComponent(message);
+    const phone = token.ownerPhone || "0000000000";
+    const whatsappLink = `https://web.whatsapp.com/send?phone=${phone}&text=${encoded}`;
+
+    res.json({ ...token.toObject(), whatsappLink });
+  } catch (error) {
+    console.error('Error getting token details:', error);
+    res.status(500).json({ message: "Error getting token details" });
   }
-
-  // Reissuance information
-  if (reissueInfo) {
-    message += `*🔄 Token Reissuance:*\n`;
-    message += `${reissueInfo.note}\n\n`;
-  }
-
-  // Reissued redemptions
-  if (reissuedRedemptions.length > 0) {
-    message += `*🧾 Reissued Token Redemptions:*\n`;
-    reissuedRedemptions.forEach((r, i) => {
-      const amountEntry = token.redeemerBusiness.find(b => b.redeemerName === r.redeemerName);
-      const amountText = amountEntry ? ` - ₹${amountEntry.amount}` : "";
-      message += `${i + 1}. ${r.redeemerName} - ${r.redeemerPhone} on ${r.date}${amountText}\n`;
-    });
-    message += '\n';
-  }
-
-  // Footer
-  message += `*Follow us on Instagram here⬇ :*\n`;
-  message += `https://bit.ly/3F7Bv1E\n\n`;
-  message += `_Thanks for your Kind visit💌_`;
-
-  const encoded = encodeURIComponent(message);
-  const phone = token.ownerPhone || "0000000000";
-  const whatsappLink = `https://web.whatsapp.com/send?phone=${phone}&text=${encoded}`;
-
-  res.json({ ...token, whatsappLink });
 });
 
 // Filter by owner
@@ -300,37 +305,39 @@ app.get("/tokens/owner/:phone", (req, res) => {
 });
 
 // Generate PDF report
-app.get("/api/reports/:type", (req, res) => {
+app.get("/api/reports/:type", async (req, res) => {
   try {
     const { type } = req.params;
-    const tokens = loadTokens();
     
-    // Filter tokens based on type
-    let filteredTokens = tokens;
-  switch (type) {
+    // Get all tokens and filter based on type
+    let query = {};
+    switch (type) {
       case 'active':
-        filteredTokens = tokens.filter(token => token.status === 'Active');
-      break;
+        query.status = 'Active';
+        break;
       case 'expired':
-        filteredTokens = tokens.filter(token => token.status === 'Expired');
-      break;
+        query.status = 'Expired';
+        break;
       case 'reissued':
-        filteredTokens = tokens.filter(token => token.maxUses > 5);
-      break;
+        query.maxUses = { $gt: 5 };
+        break;
       // 'all' case - no filtering needed
       default:
-      break;
-  }
+        break;
+    }
+
+    const tokens = await Token.find(query);
+    tokens.forEach(token => token.updateStatus());
 
     // Create PDF document
-  const doc = new PDFDocument();
+    const doc = new PDFDocument();
     
     // Set response headers
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=${type}-tokens-report.pdf`);
 
     // Pipe the PDF document to the response
-  doc.pipe(res);
+    doc.pipe(res);
 
     // Add content to PDF
     doc.fontSize(20).text(`Kalon Salon & Academy - ${type.toUpperCase()} Tokens Report`, {
@@ -345,7 +352,7 @@ app.get("/api/reports/:type", (req, res) => {
     doc.moveDown();
 
     // Add tokens table
-    filteredTokens.forEach((token, index) => {
+    tokens.forEach((token, index) => {
       doc.fontSize(14).text(`Token ${index + 1}:`, { underline: true });
       doc.fontSize(12).text(`
         Token Code: ${token.token}
@@ -379,8 +386,8 @@ app.get("/api/reports/:type", (req, res) => {
           if (redemption.note) {
             doc.text(`   Note: ${redemption.note}`, { indent: 20 });
           }
-      });
-    }
+        });
+      }
 
       doc.moveDown(2);
     });
@@ -389,15 +396,15 @@ app.get("/api/reports/:type", (req, res) => {
     doc.moveDown();
     doc.fontSize(14).text('Summary:', { underline: true });
     doc.fontSize(12).text(`
-      Total Tokens: ${filteredTokens.length}
-      Total Business: ₹${filteredTokens.reduce((sum, token) => sum + token.totalBusiness, 0)}
-      Active Tokens: ${filteredTokens.filter(t => t.status === 'Active').length}
-      Expired Tokens: ${filteredTokens.filter(t => t.status === 'Expired').length}
-      Reissued Tokens: ${filteredTokens.filter(t => t.maxUses > 5).length}
+      Total Tokens: ${tokens.length}
+      Total Business: ₹${tokens.reduce((sum, token) => sum + token.totalBusiness, 0)}
+      Active Tokens: ${tokens.filter(t => t.status === 'Active').length}
+      Expired Tokens: ${tokens.filter(t => t.status === 'Expired').length}
+      Reissued Tokens: ${tokens.filter(t => t.maxUses > 5).length}
     `);
     
     // Finalize PDF
-  doc.end();
+    doc.end();
   } catch (error) {
     console.error('Error generating report:', error);
     res.status(500).json({ message: 'Error generating report' });
