@@ -3,7 +3,10 @@ const cors = require("cors");
 const connectDB = require('./db');
 const Token = require('./models/Token');
 const PDFDocument = require("pdfkit");
+const B2BToken = require('./models/B2BToken');
+const B2BAToken = require('./models/B2BAToken');
 require('dotenv').config();
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -33,7 +36,40 @@ async function getNextSerial() {
   return lastToken ? lastToken.serial + 1 : 1;
 }
 
+// Helper function to get next B2B serial number
+async function getNextB2BSerial() {
+  const lastToken = await B2BToken.findOne().sort({ serial: -1 });
+  return lastToken ? lastToken.serial + 1 : 1;
+}
+
+// Helper function to get next B2BA serial number
+async function getNextB2BASerial() {
+  const lastToken = await B2BAToken.findOne().sort({ serial: -1 });
+  return lastToken ? parseInt(lastToken.serial) + 1 : 1;
+}
+
+// Helper function to generate B2B token code
+function generateB2BTokenCode() {
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  let code = 'B1';
+  for (let i = 0; i < 5; i++) {
+    code += letters.charAt(Math.floor(Math.random() * letters.length));
+  }
+  return code;
+}
+
+// Helper function to generate B2BA token code
+function generateB2BATokenCode() {
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  let code = 'A1';
+  for (let i = 0; i < 5; i++) {
+    code += letters.charAt(Math.floor(Math.random() * letters.length));
+  }
+  return code;
+}
+
 function calculateRemainingDays(expirationDate) {
+  if (!expirationDate) return 'N/A';
   const today = new Date();
   const expDate = new Date(expirationDate);
   const diffTime = expDate - today;
@@ -204,7 +240,7 @@ app.delete("/delete-token/:serial", async (req, res) => {
 });
 
 // Get all tokens
-app.get("/tokens", async (req, res) => {
+app.get("/api/tokens", async (req, res) => {
   try {
     const tokens = await Token.find();
     tokens.forEach(token => token.updateStatus());
@@ -301,11 +337,16 @@ app.get("/token/:serial", async (req, res) => {
 });
 
 // Filter by owner
-app.get("/tokens/owner/:phone", (req, res) => {
-  const phone = req.params.phone;
-  const tokens = loadTokens().map(updateTokenStatus);
-  const filtered = tokens.filter((t) => t.ownerPhone === phone);
-  res.json(filtered);
+app.get("/tokens/owner/:phone", async (req, res) => {
+  try {
+    const phone = req.params.phone;
+    const tokens = await Token.find({ ownerPhone: phone });
+    tokens.forEach(token => token.updateStatus());
+    res.json(tokens);
+  } catch (error) {
+    console.error('Error filtering tokens by owner:', error);
+    res.status(500).json({ message: "Error filtering tokens" });
+  }
 });
 
 // Generate PDF report
@@ -415,7 +456,551 @@ app.get("/api/reports/:type", async (req, res) => {
   }
 });
 
-// Start Server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ Backend Server running on port ${PORT}`);
+// Create new B2B token
+app.post("/api/b2b/create-token", async (req, res) => {
+  try {
+    const {
+      businessName,
+      businessOwner,
+      businessPhone,
+      businessType,
+      businessLocation,
+      instagramProfile,
+      maxUses
+    } = req.body;
+
+    const serial = await getNextB2BSerial();
+    const tokenCode = generateB2BTokenCode();
+
+    const issueDate = new Date();
+    const expirationDate = new Date(issueDate);
+    expirationDate.setFullYear(issueDate.getFullYear() + 1);
+
+    const newToken = new B2BToken({
+      serial,
+      token: tokenCode,
+      businessName,
+      businessOwner,
+      businessPhone,
+      businessType,
+      businessLocation,
+      instagramProfile,
+      maxUses,
+      issueDate,
+      expirationDate
+    });
+
+    newToken.updateStatus();
+    await newToken.save();
+
+    res.json({ message: "B2B Token created", token: newToken });
+  } catch (error) {
+    console.error('Error creating B2B token:', error);
+    res.status(500).json({ message: "Error creating B2B token" });
+  }
+});
+
+// Redeem B2B token
+app.post("/api/b2b/redeem-token/:tokenCode", async (req, res) => {
+  try {
+    const tokenCode = req.params.tokenCode.toUpperCase();
+    const { redeemerName, redeemerPhone, redeemerResidence, billAmount } = req.body;
+
+    const token = await B2BToken.findOne({ token: tokenCode });
+    if (!token) return res.status(404).json({ message: "B2B Token not found" });
+
+    if (token.status === "Expired") {
+      return res.status(400).json({ message: "B2B Token is expired" });
+    }
+
+    if (token.currentUses >= token.maxUses) {
+      return res.status(400).json({ message: "B2B Token has reached maximum uses" });
+    }
+
+    token.currentUses += 1;
+    token.redemptions.push({
+      redeemerName,
+      redeemerPhone,
+      redeemerResidence,
+      billAmount: Number(billAmount)
+    });
+
+    token.updateStatus();
+    await token.save();
+
+    res.json({ message: "B2B Token redeemed successfully", token });
+  } catch (error) {
+    console.error('Error redeeming B2B token:', error);
+    res.status(500).json({ message: "Error redeeming B2B token" });
+  }
+});
+
+// Get all B2B tokens
+app.get("/api/b2b/tokens", async (req, res) => {
+  try {
+    const tokens = await B2BToken.find();
+    for (const token of tokens) {
+      token.updateStatus();
+      await token.save();
+    }
+    res.json({ tokens });
+  } catch (error) {
+    console.error('Error fetching B2B tokens:', error);
+    res.status(500).json({ message: "Error fetching B2B tokens" });
+  }
+});
+
+// Extend B2B token
+app.put("/api/b2b/extend-token/:tokenCode", async (req, res) => {
+  try {
+    const { days } = req.body;
+    const tokenCode = req.params.tokenCode.toUpperCase();
+
+    const token = await B2BToken.findOne({ token: tokenCode });
+    if (!token) return res.status(404).json({ message: "B2B Token not found" });
+
+    token.extendToken(Number(days));
+    await token.save();
+
+    res.json({ message: "B2B Token extended successfully", token });
+  } catch (error) {
+    console.error('Error extending B2B token:', error);
+    res.status(500).json({ message: "Error extending B2B token" });
+  }
+});
+
+// Get B2B reports
+app.get("/api/b2b/reports", async (req, res) => {
+  try {
+    const tokens = await B2BToken.find();
+    tokens.forEach(token => token.updateStatus());
+
+    // Calculate business partner rankings
+    const businessPartners = tokens.map(token => ({
+      businessName: token.businessName,
+      businessOwner: token.businessOwner,
+      businessType: token.businessType,
+      totalBusiness: token.totalBusiness,
+      activeTokens: token.status === 'Active' ? 1 : 0,
+      expiredTokens: token.status === 'Expired' ? 1 : 0
+    }));
+
+    // Sort by total business
+    businessPartners.sort((a, b) => b.totalBusiness - a.totalBusiness);
+
+    // Calculate totals
+    const totalBusiness = businessPartners.reduce((sum, bp) => sum + bp.totalBusiness, 0);
+    const activeTokens = businessPartners.reduce((sum, bp) => sum + bp.activeTokens, 0);
+    const expiredTokens = businessPartners.reduce((sum, bp) => sum + bp.expiredTokens, 0);
+
+    res.json({
+      businessPartners,
+      summary: {
+        totalBusiness,
+        activeTokens,
+        expiredTokens,
+        totalPartners: businessPartners.length
+      }
+    });
+  } catch (error) {
+    console.error('Error generating B2B report:', error);
+    res.status(500).json({ message: "Error generating B2B report" });
+  }
+});
+
+// Delete B2B token
+app.delete("/api/b2b/tokens/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await B2BToken.findByIdAndDelete(id);
+    
+    if (!result) {
+      return res.status(404).json({ message: "B2B Token not found" });
+    }
+
+    res.json({ message: "B2B Token deleted successfully" });
+  } catch (error) {
+    console.error('Error deleting B2B token:', error);
+    res.status(500).json({ message: "Error deleting B2B token" });
+  }
+});
+
+// Get single B2B token with WhatsApp link
+app.get("/api/b2b/token/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('Fetching B2B token with ID:', id);
+    
+    const token = await B2BToken.findById(id);
+    console.log('Token found:', token ? 'Yes' : 'No');
+
+    if (!token) {
+      console.log('Token not found for ID:', id);
+      return res.status(404).json({ message: "B2B Token not found" });
+    }
+
+    // Update token status
+    token.updateStatus();
+    await token.save();
+    console.log('Token status updated');
+
+    // Generate message using the model's method
+    const message = token.generateWhatsAppMessage();
+    console.log('Message generated');
+
+    const encoded = encodeURIComponent(message);
+    const phone = token.businessPhone || "0000000000";
+    const whatsappLink = `https://web.whatsapp.com/send?phone=${phone}&text=${encoded}`;
+    console.log('WhatsApp link generated');
+
+    res.json({ ...token.toObject(), whatsappLink });
+  } catch (error) {
+    console.error('Error getting B2B token details:', error);
+    res.status(500).json({ 
+      message: "Error getting B2B token details",
+      error: error.message 
+    });
+  }
+});
+
+// B2BA Token Creation
+app.post("/api/b2ba/tokens", async (req, res) => {
+  try {
+    const {
+      businessName,
+      agentName,
+      phone,
+      businessType,
+      region,
+      commission,
+      numberOfTokens
+    } = req.body;
+
+    // Validate required fields
+    if (!businessName || !agentName || !phone || !businessType || !region || !commission || !numberOfTokens) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+
+    // Validate number of uses
+    const maxUses = parseInt(numberOfTokens);
+    if (isNaN(maxUses) || maxUses <= 0 || maxUses > 500) {
+      return res.status(400).json({ error: "Number of uses must be between 1 and 500" });
+    }
+
+    // Get next serial number
+    const serial = await getNextB2BASerial();
+    const tokenCode = generateB2BATokenCode();
+
+    // Set expirationDate to 1 year from now and remainingDays to 365
+    const now = new Date();
+    const expirationDate = new Date(now);
+    expirationDate.setDate(expirationDate.getDate() + 365);
+
+    // Create single token with multiple uses
+    const token = new B2BAToken({
+      serial: serial.toString(),
+      tokenCode,
+      businessName,
+      agentName,
+      phone,
+      businessType,
+      region,
+      commission,
+      maxUses,
+      currentUses: 0,
+      status: "active",
+      expirationDate,
+      redemptions: [],
+      totalBusiness: 0,
+      remainingDays: 365
+    });
+
+    await token.save();
+    const obj = token.toObject();
+    obj.remainingDays = 365;
+    res.status(201).json({
+      message: "Token created successfully",
+      token: obj
+    });
+  } catch (error) {
+    console.error("Error creating B2BA token:", error);
+    res.status(500).json({ error: "Failed to create token" });
+  }
+});
+
+// B2BA Token Redemption
+app.post("/api/b2ba/tokens/redeem", async (req, res) => {
+  try {
+    const {
+      tokenCode,
+      redeemerName,
+      redeemerPhone,
+      redeemerResidence,
+      billAmount
+    } = req.body;
+
+    // Validate required fields
+    if (!tokenCode || !redeemerName || !redeemerPhone || !redeemerResidence || !billAmount) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+
+    // Find token
+    const token = await B2BAToken.findOne({ tokenCode });
+    if (!token) {
+      return res.status(404).json({ error: "Token not found" });
+    }
+
+    if (token.status === "expired") {
+      return res.status(400).json({ error: "Token has expired" });
+    }
+
+    // Check if token has reached max uses
+    if (token.currentUses >= token.maxUses) {
+      token.status = "expired";
+      await token.save();
+      return res.status(400).json({ error: "Token has reached maximum uses" });
+    }
+
+    // Update token
+    token.currentUses += 1;
+    if (token.currentUses >= token.maxUses) {
+      token.status = "expired";
+    }
+    token.redeemedAt = new Date();
+    token.redeemerName = redeemerName;
+    token.redeemerPhone = redeemerPhone;
+    token.redeemerResidence = redeemerResidence;
+    token.billAmount = billAmount;
+    // Push redemption to redemptions array
+    token.redemptions.push({
+      date: new Date(),
+      redeemerName,
+      redeemerPhone,
+      redeemerResidence,
+      billAmount
+    });
+    // Recalculate totalBusiness
+    token.totalBusiness = token.redemptions.reduce((sum, r) => sum + (r.billAmount || 0), 0);
+
+    token.remainingDays = calculateRemainingDays(token.expirationDate);
+    await token.save();
+    const obj = token.toObject();
+    obj.remainingDays = token.remainingDays;
+    res.json({
+      message: "Token redeemed successfully",
+      token: obj,
+      remainingUses: token.maxUses - token.currentUses
+    });
+  } catch (error) {
+    console.error("Error redeeming B2BA token:", error);
+    res.status(500).json({ error: "Failed to redeem token" });
+  }
+});
+
+// B2BA Token Extension (PUT)
+app.put("/api/b2ba/tokens/extend/:tokenCode", async (req, res) => {
+  try {
+    const { days } = req.body;
+    const { tokenCode } = req.params;
+    if (!days || isNaN(days) || days <= 0) {
+      return res.status(400).json({ error: "Invalid number of days" });
+    }
+    const token = await B2BAToken.findOne({ tokenCode });
+    if (!token) {
+      return res.status(404).json({ error: "Token not found" });
+    }
+    // Always convert expirationDate to Date object before updating
+    let expDate = new Date(token.expirationDate);
+    expDate.setDate(expDate.getDate() + parseInt(days));
+    token.expirationDate = expDate;
+    // Always recalculate remainingDays from new expirationDate
+    token.remainingDays = calculateRemainingDays(token.expirationDate);
+    await token.save();
+    const obj = token.toObject();
+    obj.remainingDays = token.remainingDays;
+    res.json({ message: "Token extended successfully", token: obj });
+  } catch (error) {
+    console.error("Error extending B2BA token:", error);
+    res.status(500).json({ error: "Failed to extend token" });
+  }
+});
+
+// Get all B2BA tokens
+app.get("/api/b2ba/tokens", async (req, res) => {
+  try {
+    const tokens = await B2BAToken.find({}).sort({ serial: 1 });
+    const tokensWithDays = tokens.map(token => {
+      const obj = token.toObject();
+      obj.remainingDays = calculateRemainingDays(token.expirationDate);
+      return obj;
+    });
+    res.json({ tokens: tokensWithDays });
+  } catch (error) {
+    console.error("Error fetching B2BA tokens:", error);
+    res.status(500).json({ error: "Failed to fetch tokens" });
+  }
+});
+
+// Get B2BA reports summary
+app.get("/api/b2ba/reports", async (req, res) => {
+  try {
+    const tokens = await B2BAToken.find({}).sort({ serial: 1 });
+    
+    // Calculate summary statistics
+    const activeTokens = tokens.filter(t => t.status === 'active').length;
+    const expiredTokens = tokens.filter(t => t.status === 'expired').length;
+    const totalBusiness = tokens.reduce((sum, t) => sum + (t.totalBusiness || 0), 0);
+
+    // Process tokens for display
+    const processedTokens = tokens.map(token => {
+      const obj = token.toObject();
+      obj.remainingDays = calculateRemainingDays(token.expirationDate);
+      return obj;
+    });
+
+    res.json({
+      summary: {
+        totalTokens: tokens.length,
+        activeTokens,
+        expiredTokens,
+        totalBusiness
+      },
+      tokens: processedTokens
+    });
+  } catch (error) {
+    console.error("Error generating B2BA report:", error);
+    res.status(500).json({ error: "Failed to generate report" });
+  }
+});
+
+// Get B2BA token by serial
+app.get("/api/b2ba/tokens/:serial", async (req, res) => {
+  try {
+    const token = await B2BAToken.findOne({ serial: req.params.serial });
+    if (!token) {
+      return res.status(404).json({ error: "Token not found" });
+    }
+    res.json({ token });
+  } catch (error) {
+    console.error("Error fetching B2BA token:", error);
+    res.status(500).json({ error: "Failed to fetch token" });
+  }
+});
+
+// Generate B2BA reports by type
+app.get("/api/b2ba/reports/:type", async (req, res) => {
+  try {
+    const { type } = req.params;
+    let query = {};
+
+    switch (type) {
+      case "active":
+        query = { status: "active" };
+        break;
+      case "redeemed":
+        query = { status: "redeemed" };
+        break;
+      case "expired":
+        query = { status: "expired" };
+        break;
+      case "all":
+      default:
+        query = {};
+    }
+
+    const tokens = await B2BAToken.find(query).sort({ createdAt: -1 });
+
+    // Generate PDF report
+    const doc = new PDFDocument();
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename=b2ba-${type}-report.pdf`);
+
+    doc.pipe(res);
+
+    // Add report content
+    doc.fontSize(20).text("B2BA Token Report", { align: "center" });
+    doc.moveDown();
+    doc.fontSize(12).text(`Report Type: ${type.toUpperCase()}`, { align: "center" });
+    doc.moveDown();
+
+    tokens.forEach((token, index) => {
+      doc.fontSize(10).text(`Token ${index + 1}:`);
+      doc.text(`Serial: ${token.serial}`);
+      doc.text(`Business Name: ${token.businessName}`);
+      doc.text(`Agent Name: ${token.agentName}`);
+      doc.text(`Phone: ${token.phone}`);
+      doc.text(`Business Type: ${token.businessType}`);
+      doc.text(`Region: ${token.region}`);
+      doc.text(`Commission: ${token.commission}%`);
+      doc.text(`Status: ${token.status}`);
+      doc.text(`Created: ${new Date(token.createdAt).toLocaleDateString()}`);
+      if (token.status === "redeemed") {
+        doc.text(`Redeemed By: ${token.redeemerName}`);
+        doc.text(`Redeemed At: ${new Date(token.redeemedAt).toLocaleDateString()}`);
+        doc.text(`Bill Amount: ${token.billAmount}`);
+      }
+      doc.moveDown();
+    });
+
+    doc.end();
+  } catch (error) {
+    console.error("Error generating B2BA report:", error);
+    res.status(500).json({ error: "Failed to generate report" });
+  }
+});
+
+// Temporary endpoint to delete all B2BA tokens
+app.delete("/api/b2ba/tokens/delete-all", async (req, res) => {
+  try {
+    await B2BAToken.deleteMany({});
+    res.json({ message: "All B2BA tokens deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting B2BA tokens:", error);
+    res.status(500).json({ error: "Failed to delete tokens" });
+  }
+});
+
+// Test endpoint to check B2BA tokens
+app.get("/api/b2ba/tokens/test", async (req, res) => {
+  try {
+    const count = await B2BAToken.countDocuments();
+    const sample = await B2BAToken.find().limit(5);
+    res.json({
+      totalTokens: count,
+      sampleTokens: sample,
+      collectionName: B2BAToken.collection.name
+    });
+  } catch (error) {
+    console.error("Error checking B2BA tokens:", error);
+    res.status(500).json({ error: "Failed to check tokens" });
+  }
+});
+
+// Delete a single B2BA token by tokenCode
+app.delete("/api/b2ba/tokens/:tokenCode", async (req, res) => {
+  try {
+    const { tokenCode } = req.params;
+    const result = await B2BAToken.deleteOne({ tokenCode });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: "Token not found" });
+    }
+    res.json({ message: "Token deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting B2BA token:", error);
+    res.status(500).json({ error: "Failed to delete token" });
+  }
+});
+
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, 'token-frontend/dist')));
+
+// Catch-all route to serve the React app
+app.get('*', (req, res) => {
+  console.log('Catch-all route hit:', req.url);
+  res.sendFile(path.join(__dirname, 'token-frontend/dist/index.html'));
+});
+
+// Start the server
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });

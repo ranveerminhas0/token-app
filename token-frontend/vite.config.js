@@ -13,25 +13,34 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
+        secure: false
+      },
+      '/b2b': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false
       }
-    },
-    historyApiFallback: true,
-    middleware: [
-      (req, res, next) => {
-        // Redirect all non-API requests to index.html
-        if (!req.url.includes('/api/') && !req.url.includes('/token')) {
-          req.url = '/index.html';
-        }
-        next();
-      }
-    ]
+    }
   },
   optimizeDeps: {
     include: ['react', 'react-dom']
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          ui: ['@chakra-ui/react', '@emotion/react', '@emotion/styled', 'framer-motion']
+        }
+      }
+    }
+  },
+  preview: {
+    port: 3003,
+    strictPort: true,
+    host: true,
+    open: true
   }
 })

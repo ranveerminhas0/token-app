@@ -45,7 +45,9 @@ const TokenCard = ({ token, onTokenDeleted, highlight = false, autoExpand = fals
       const response = await fetch(getApiUrl(`token/${token.serial}`));
       if (!response.ok) throw new Error('Failed to get token details');
       const data = await response.json();
-      window.open(data.whatsappLink, '_blank');
+      // Open in WhatsApp Web instead of WhatsApp app
+      const whatsappWebLink = data.whatsappLink.replace('https://wa.me/', 'https://web.whatsapp.com/send?');
+      window.open(whatsappWebLink, '_blank');
     } catch (error) {
       console.error('Error sharing token:', error);
       toast({

@@ -1,0 +1,273 @@
+.reports-container {
+  padding: 2rem;
+  max-width: 1600px;
+  margin: 0 auto;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+.reports-header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.reports-header h2 {
+  color: #2c3e50;
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.reports-header p {
+  color: #7f8c8d;
+  font-size: 0.9rem;
+}
+
+.reports-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.summary-card {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.summary-card:hover {
+  transform: translateY(-5px);
+}
+
+.summary-card svg {
+  font-size: 2rem;
+  color: #3498db;
+  margin-bottom: 1rem;
+}
+
+.summary-card h3 {
+  color: #2c3e50;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.summary-card p {
+  color: #2c3e50;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.business-partners {
+  margin-top: 2rem;
+}
+
+.business-partners h3 {
+  color: #2c3e50;
+  margin-bottom: 1rem;
+  font-size: 1.4rem;
+}
+
+.partners-table {
+  overflow-x: auto;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
+}
+
+th, td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+th {
+  background: #f8f9fa;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+tr:hover {
+  background: #f8f9fa;
+}
+
+td:first-child {
+  font-weight: bold;
+  color: #3498db;
+}
+
+.reports-actions {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.print-button {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 0.8rem 2rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.print-button:hover {
+  background: #2980b9;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  color: #7aecda;
+  font-size: 1.2rem;
+}
+
+.error-message {
+  color: #ff6b6b;
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.2rem;
+}
+
+@media print {
+  .reports-container {
+    padding: 0;
+    background: white;
+  }
+
+  .reports-container .chakra-box {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    background: white !important;
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+  }
+
+  .reports-container .chakra-text {
+    color: black !important;
+  }
+
+  .reports-container .chakra-icon {
+    color: #333 !important;
+  }
+
+  .reports-container .recharts-wrapper {
+    page-break-inside: avoid;
+  }
+
+  .reports-actions {
+    display: none;
+  }
+
+  .summary-card {
+    break-inside: avoid;
+  }
+
+  .partners-table {
+    break-inside: auto;
+  }
+
+  table {
+    font-size: 12px;
+  }
+
+  th, td {
+    padding: 0.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .reports-container {
+    padding: 1rem;
+  }
+
+  .reports-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .summary-card {
+    padding: 1rem;
+  }
+
+  .summary-card svg {
+    font-size: 1.5rem;
+  }
+
+  .summary-card p {
+    font-size: 1.2rem;
+  }
+}
+
+/* Glass-morphism Card Styles */
+.reports-container .chakra-box {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Chart Styles */
+.recharts-wrapper {
+  margin: 0 auto;
+}
+
+.recharts-default-tooltip {
+  background-color: rgba(0, 0, 0, 0.9) !important;
+  border: 1px solid rgba(122, 236, 218, 0.3) !important;
+  border-radius: 8px !important;
+  padding: 12px !important;
+}
+
+.recharts-tooltip-label {
+  color: #7aecda !important;
+  font-weight: bold !important;
+}
+
+.recharts-tooltip-item {
+  color: #7aecda !important;
+}
+
+/* Custom Scrollbar */
+.reports-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.reports-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+.reports-container::-webkit-scrollbar-thumb {
+  background: rgba(122, 236, 218, 0.3);
+  border-radius: 4px;
+}
+
+.reports-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(122, 236, 218, 0.5);
+}
+
+/* Animation Classes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reports-container > * {
+  animation: fadeIn 0.5s ease-out forwards;
+} 

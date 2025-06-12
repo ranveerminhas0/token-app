@@ -241,20 +241,40 @@ function Landing() {
                   m={0}
                   p={0}
                 >
-                  <BlurText
-                    text="KALON SALON & ACADEMY"
-                    delay={50}
-                    animateBy="words"
-                    direction="top"
-                    stepDuration={0.3}
-                    easing={t => t * t * (3 - 2 * t)}
-                    style={{
-                      fontSize: '72px',
-                      fontWeight: 900,
-                      color: '#7aecda',
-                      textShadow: '0 0 20px rgba(122, 236, 218, 0.3)'
-                    }}
-                  />
+                  <Box position="relative">
+                    <BlurText
+                      text="KALON SALON & ACADEMY"
+                      delay={50}
+                      animateBy="words"
+                      direction="top"
+                      stepDuration={0.3}
+                      easing={t => t * t * (3 - 2 * t)}
+                      style={{
+                        fontSize: '72px',
+                        fontWeight: 900,
+                        color: '#7aecda',
+                        textShadow: '0 0 20px rgba(122, 236, 218, 0.3)'
+                      }}
+                    />
+                    <motion.span
+                      initial={{ opacity: 0, filter: 'blur(10px)' }}
+                      animate={{ opacity: 1, filter: 'blur(0px)' }}
+                      transition={{ delay: 0.5, duration: 0.5 }}
+                      style={{
+                        position: 'absolute',
+                        right: 0,
+                        bottom: '-25px',
+                        fontSize: '24px',
+                        fontWeight: 'bold',
+                        color: '#7aecda',
+                        textShadow: '0 0 10px rgba(122, 236, 218, 0.3)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px'
+                      }}
+                    >
+                      VERSION 2
+                    </motion.span>
+                  </Box>
                 </Box>
               )}
             </AnimatePresence>
@@ -682,20 +702,37 @@ function Landing() {
               m={0}
               p={0}
             >
-              <BlurText
-                text="KALON SALON & ACADEMY"
-                delay={50}
-                animateBy="words"
-                direction="top"
-                stepDuration={0.3}
-                easing={t => t * t * (3 - 2 * t)}
-                style={{
-                  fontSize: '72px',
-                  fontWeight: 900,
-                  color: '#7aecda',
-                  textShadow: '0 0 20px rgba(122, 236, 218, 0.3)'
-                }}
-              />
+              <Box position="relative">
+                <BlurText
+                  text="KALON SALON & ACADEMY"
+                  delay={50}
+                  animateBy="words"
+                  direction="top"
+                  stepDuration={0.3}
+                  easing={t => t * t * (3 - 2 * t)}
+                  style={{
+                    fontSize: '72px',
+                    fontWeight: 900,
+                    color: '#7aecda',
+                    textShadow: '0 0 20px rgba(122, 236, 218, 0.3)'
+                  }}
+                />
+                <motion.span
+                  initial={{ opacity: 0, filter: 'blur(10px)' }}
+                  animate={{ opacity: 1, filter: 'blur(0px)' }}
+                  transition={{ delay: 0.5, duration: 0.5 }}
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    bottom: '-20px',
+                    fontSize: '16px',
+                    color: '#7aecda',
+                    textShadow: '0 0 10px rgba(122, 236, 218, 0.3)'
+                  }}
+                >
+                  version 2
+                </motion.span>
+              </Box>
             </Box>
           )}
         </AnimatePresence>

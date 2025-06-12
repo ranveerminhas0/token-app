@@ -23,6 +23,7 @@ const MenuItem = ({ label, isOpen, onClick, hasSubItems, isSubItem = false }) =>
 const Sidebar = ({ isOpen }) => {
   const [tokenDetailsOpen, setTokenDetailsOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
+  const [modelsOpen, setModelsOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleTokensClick = (path) => {
@@ -73,6 +74,40 @@ const Sidebar = ({ isOpen }) => {
       variants={sidebarVariants}
     >
       <div className={styles.menuContainer}>
+        {/* Switch Models Section */}
+        <MenuItem
+          label="SWITCH MODELS"
+          isOpen={modelsOpen}
+          onClick={() => setModelsOpen(!modelsOpen)}
+          hasSubItems={true}
+        />
+        <AnimatePresence>
+          {modelsOpen && (
+            <motion.div
+              className={styles.subMenuContainer}
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+            >
+              <MenuItem
+                label="B2B Model"
+                isSubItem={true}
+                onClick={() => handleTokensClick('/b2b')}
+              />
+              <MenuItem
+                label="B2C Model"
+                isSubItem={true}
+                onClick={() => handleTokensClick('/')}
+              />
+              <MenuItem
+                label="B2BA Model"
+                isSubItem={true}
+                onClick={() => handleTokensClick('/b2ba')}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Get Token Details Section */}
         <MenuItem
           label="GET TOKEN DETAILS"

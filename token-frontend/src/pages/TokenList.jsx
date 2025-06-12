@@ -23,7 +23,7 @@ const TokenList = () => {
   useEffect(() => {
     const fetchTokens = async () => {
       try {
-        const response = await fetch(getApiUrl('tokens'));
+        const response = await fetch(getApiUrl('api/tokens'));
         const data = await response.json();
         
         // Filter tokens based on type
