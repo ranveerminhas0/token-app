@@ -159,3 +159,7 @@ p:hover, h1:hover, h2:hover, h3:hover, h4:hover, h5:hover, h6:hover, span:hover,
                0 0 30px rgba(122, 236, 218, 0.3);
   transform: scale(1.01);
 }
+
+.no-asterisk .chakra-form__required-indicator {
+  display: none !important;
+}

@@ -33,6 +33,12 @@
   transform: translateX(5px) !important;
 }
 
+.menuItemContent {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
 .menuItemText {
   font-size: 1.1rem !important;
   font-weight: bold !important;
@@ -57,6 +63,9 @@
   color: #7aecda !important;
   width: 20px !important;
   height: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .menuContainer {
@@ -71,4 +80,20 @@
   display: flex !important;
   flex-direction: column !important;
   gap: 4px !important;
+}
+
+/* Model Switch specific styles */
+.menuItem[data-model="active"] {
+  background: rgba(122, 236, 218, 0.15) !important;
+  border: 1px solid rgba(122, 236, 218, 0.3) !important;
+}
+
+.menuItem[data-model="active"] .menuItemText {
+  color: #fff !important;
+  text-shadow: 0 0 15px rgba(122, 236, 218, 0.8) !important;
+}
+
+.menuItem[data-model="active"] .menuIcon {
+  color: #fff !important;
+  text-shadow: 0 0 15px rgba(122, 236, 218, 0.8) !important;
 } 

@@ -25,7 +25,7 @@ const Search = () => {
     const fetchResults = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(getApiUrl('tokens'));
+        const response = await fetch(getApiUrl('api/tokens'));
         if (!response.ok) throw new Error('Failed to fetch tokens');
         const data = await response.json();
         
